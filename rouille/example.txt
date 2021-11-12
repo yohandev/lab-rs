@@ -1,0 +1,32 @@
+# Example for 'rouille' syntax
+# Inspiration from Rust, Python is obvious
+
+# A comment above a function is documentation
+fn hello(foo: str, bar: Option<i32>):
+    # Uh oh, this isn't used. Oh well!
+    let baz = 30
+
+    let lol = |hi: i32| hi + 2
+
+    if let Some(val) = bar:
+        print("bar is {val}, but lol(bar) is {lol(bar)}")
+    print(str)
+
+struct Foo:
+    field: i32
+    field2: Box<[i32]>
+
+struct Bar<T>:
+    pub bar: i32
+    pub foo: Foo
+    pub and: T
+
+# Tuple struct, with generic
+struct Baz<T>: T, i32
+
+impl Foo:
+    fn whoami(&self):
+        print("Foo(field: {self.field}, field2: {self.field2})")
+
+fn main():
+    hello("Hello, world!", Some(42))
