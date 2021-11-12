@@ -1,81 +1,89 @@
-use std::ops::Range;
-
-use regex::Regex;
+use std::{marker::PhantomData, ops::Range};
 
 #[derive(Debug)]
-pub struct Tokens<'a>
-{
-    pat: Box<[(TokenKind, Regex)]>,
-    
+pub struct Tokens<'a, T>
+{    
     src: &'a str,
     next: usize,
+
+    _kind: PhantomData<T>,
 }
 
 /// Some token extracted from source code
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Token<'a>
+pub struct Token<'a, T>
 {
-    kind: TokenKind,
+    kind: T,
     span: Range<usize>,
     text: &'a str,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TokenKind
+/// Implemented by `enum` over types of tokens. Don't try to implement this
+/// yourself, use the `tokens!` macro.
+pub trait TokenKind: Sized + Copy
 {
-    Whitespace, // ' '
-    
-    LBrace,     // {
-    RBrace,     // }
-    LParen,     // (
-    RParen,     // )
-
-    Fn,         // fn
-    Let,        // let
-    Return,     // return
-    
-    Plus,       // +
-    Minus,      // -
-    Asterisk,   // *
-    Slash,      // /
-    Equals,     // =
-
-    Ident,      // Alphanumeric identifier
-    Num,        // Integer or floating point
+    /// Get some token at the beginning of the string `src`, or `None`
+    fn find(src: &str) -> Option<(Self, regex::Match<'_>)>;
 }
 
-impl<'a> Tokens<'a>
+#[macro_export]
+macro_rules! tokens
+{
+    {
+        $(#[$outer:meta])*
+        $vis:vis enum $enum_name:ident
+        {
+            $(
+                $(#[$inner:ident $($args:tt)*])*
+                $name:ident = $regex:literal
+            ),* $(,)?
+        }
+    } =>
+    {
+        $(#[$outer])*
+        $vis enum $enum_name
+        {
+            $(
+                $(#[$inner $($args)*])*
+                $name
+            ),*
+        }
+
+        impl crate::lexer::TokenKind for $enum_name
+        {
+            #[allow(non_upper_case_globals)]
+            fn find(src: &str) -> Option<(Self, regex::Match<'_>)>
+            {
+                // Precompute the regex patterns
+                lazy_static::lazy_static!
+                {$(
+                    static ref $name: regex::Regex = regex::Regex::new(&*("^(".to_owned() + $regex + ")")).unwrap();
+                )*}
+                $(
+                    // Go through every token kind's regex
+                    if let Some(mat) = $name.find(src)
+                    {
+                        return Some(($enum_name::$name, mat));
+                    }
+                )*
+                // None found
+                return None
+            }
+        }
+    };
+}
+
+impl<'a, T> Tokens<'a, T>
 {
     pub fn new(src: &'a str) -> Self
     {
-        let pat = Box::new([
-            (TokenKind::Whitespace, Regex::new(r"^([ \n\t\f]+)").unwrap()),
-            (TokenKind::LBrace, Regex::new(r"^\{").unwrap()),
-            (TokenKind::RBrace, Regex::new(r"^\}").unwrap()),
-            (TokenKind::LParen, Regex::new(r"^\(").unwrap()),
-            (TokenKind::RParen, Regex::new(r"^\)").unwrap()),
-
-            (TokenKind::Fn, Regex::new(r"^fn").unwrap()),
-            (TokenKind::Let, Regex::new(r"^let").unwrap()),
-            (TokenKind::Return, Regex::new(r"^return").unwrap()),
-
-            (TokenKind::Plus, Regex::new(r"^\+").unwrap()),
-            (TokenKind::Minus, Regex::new(r"^-").unwrap()),
-            (TokenKind::Asterisk, Regex::new(r"^\*").unwrap()),
-            (TokenKind::Slash, Regex::new(r"^/").unwrap()),
-            (TokenKind::Equals, Regex::new(r"^=").unwrap()),
-            
-            (TokenKind::Ident, Regex::new(r"^[A-Za-z]+([A-Za-z0-9]+)?").unwrap()),
-            (TokenKind::Num, Regex::new(r"^([0-9]+)(\.[0-9]+)?").unwrap()),
-        ]);
-
-        Self { next: 0, pat, src }
+        Self { next: 0, src, _kind: PhantomData }
     }
 }
 
-impl<'a> Iterator for Tokens<'a>
+impl<'a, T: TokenKind> Iterator for Tokens<'a, T>
 {
-    type Item = Result<Token<'a>, ()>;
+    type Item = Result<Token<'a, T>, ()>;
 
     fn next(&mut self) -> Option<Self::Item>
     {
@@ -85,24 +93,19 @@ impl<'a> Iterator for Tokens<'a>
             return None;
         }
 
-        // Disambiguate tokens by order they're evaluated
-        for (kind, pat) in &*self.pat
+        // 1. Disambiguate tokens by order they're evaluated
+        // 2. Pattern will only match start of line(via '^')
+        if let Some((kind, mat)) = T::find(&self.src[self.next..])
         {
-            // Pattern will only match start of line(via '^')
-            let mat = pat.find(&self.src[self.next..]);
+            // Next token
+            self.next += mat.end();
 
-            if let Some(mat) = mat
+            return Some(Ok(Token
             {
-                // Next token
-                self.next += mat.end();
-
-                return Some(Ok(Token
-                {
-                    kind: *kind,
-                    span: self.next - mat.end()..self.next,
-                    text: mat.as_str(),
-                }));
-            }
+                kind,
+                span: self.next - mat.end()..self.next,
+                text: mat.as_str(),
+            }));
         }
         // Unknown token, TODO: skip unknown, continue with other tokens
         self.next = self.src.len();
@@ -110,9 +113,9 @@ impl<'a> Iterator for Tokens<'a>
     }
 }
 
-impl<'a> Token<'a>
+impl<'a, T: TokenKind> Token<'a, T>
 {
-    pub fn kind(&self) -> TokenKind
+    pub fn kind(&self) -> T
     {
         self.kind
     }

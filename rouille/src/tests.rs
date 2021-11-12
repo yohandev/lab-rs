@@ -1,8 +1,9 @@
 use std::ops::Range;
 
-use crate::lexer::*;
+use crate::lexer::Tokens;
+use crate::TokenKind;
 
-fn check(iter: &mut Tokens, kind: TokenKind, text: &str, span: impl Into<Option<Range<usize>>>)
+fn check(iter: &mut Tokens<TokenKind>, kind: TokenKind, text: &str, span: impl Into<Option<Range<usize>>>)
 {
     let token = iter
         .next()
@@ -90,7 +91,7 @@ fn test_lexer_03()
 #[test]
 fn test_lexer_04()
 {
-    let tokens = Tokens::new("let foo = (42 + 50) / 1");
+    let tokens = Tokens::<TokenKind>::new("let foo = (42 + 50) / 1");
     let tokens = tokens
         .map(|tk| tk.unwrap().as_str())
         .collect::<Vec<_>>();
