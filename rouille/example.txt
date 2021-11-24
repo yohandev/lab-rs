@@ -12,6 +12,10 @@ fn hello(foo: str, bar: Option<i32>):
         print("bar is {val}, but lol(bar) is {lol(bar)}")
     print(str)
 
+fn foo():
+fn bar():
+
+
 struct Foo:
     field: i32
     field2: Box<[i32]>

@@ -64,7 +64,7 @@ fn test_lexer_03()
 {
     let mut tokens = Tokens::new("
     let x = 42
-    let y = 50.20
+    let y = 50.20 # This value is a number
     ");
 
     check(&mut tokens, TokenKind::Whitespace, "\n    ", None);
@@ -86,6 +86,9 @@ fn test_lexer_03()
     check(&mut tokens, TokenKind::Equals, "=", None);
     check(&mut tokens, TokenKind::Whitespace, " ", None);
     check(&mut tokens, TokenKind::Num, "50.20", None);
+
+    check(&mut tokens, TokenKind::Whitespace, " ", None);
+    check(&mut tokens, TokenKind::Comment, "# This value is a number", None);
 }
 
 #[test]

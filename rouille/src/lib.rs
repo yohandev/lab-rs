@@ -8,6 +8,7 @@ tokens!(
     pub enum TokenKind
     {
         Whitespace = r"[ \n\t\f]+",
+        Comment = r"#.+",
     
         LBrace = r"\{",
         RBrace = r"\}",

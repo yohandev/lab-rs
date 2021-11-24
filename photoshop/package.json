@@ -1,0 +1,19 @@
+{
+  "name": "photoshop",
+  "version": "1.0.0",
+  "description": "A WebAssembly, Photoshop-like application",
+  "main": "index.js",
+  "author": "yohandev",
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.js",
+    "serve": "node build.js --serve"
+  },
+  "devDependencies": {
+    "@types/mithril": "^2.0.8",
+    "esbuild": "^0.13.15"
+  },
+  "dependencies": {
+    "mithril": "^2.0.4"
+  }
+}
